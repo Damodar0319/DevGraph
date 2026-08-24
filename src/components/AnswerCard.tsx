@@ -29,6 +29,7 @@ interface AnswerCardProps {
 export function AnswerCard({ result, onSelectEntity }: AnswerCardProps) {
   const [copied, setCopied] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'answer' | 'graph' | 'evidence'>('all');
 
   const handleCopy = () => {
     navigator.clipboard.writeText(result.answer);
@@ -129,6 +130,55 @@ export function AnswerCard({ result, onSelectEntity }: AnswerCardProps) {
           </div>
         </div>
 
+        {/* View Mode Tab Selector Bar */}
+        <div className="px-5 md:px-6 pt-2 pb-0 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between font-mono text-xs overflow-x-auto shrink-0">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-3.5 py-2 rounded-t-xl font-bold transition-all border-t border-x cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-white text-slate-900 border-slate-200 shadow-2xs'
+                  : 'bg-transparent text-slate-500 hover:text-slate-900 border-transparent'
+              }`}
+            >
+              <span>Full Summary</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('answer')}
+              className={`px-3.5 py-2 rounded-t-xl font-bold transition-all border-t border-x cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'answer'
+                  ? 'bg-white text-slate-900 border-slate-200 shadow-2xs'
+                  : 'bg-transparent text-slate-500 hover:text-slate-900 border-transparent'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+              <span>Grounded Answer</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('graph')}
+              className={`px-3.5 py-2 rounded-t-xl font-bold transition-all border-t border-x cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'graph'
+                  ? 'bg-white text-slate-900 border-slate-200 shadow-2xs'
+                  : 'bg-transparent text-slate-500 hover:text-slate-900 border-transparent'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Knowledge Graph ({result.graphNodes.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('evidence')}
+              className={`px-3.5 py-2 rounded-t-xl font-bold transition-all border-t border-x cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'evidence'
+                  ? 'bg-white text-slate-900 border-slate-200 shadow-2xs'
+                  : 'bg-transparent text-slate-500 hover:text-slate-900 border-transparent'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-600" />
+              <span>GitHub Sources ({result.evidence.length})</span>
+            </button>
+          </div>
+        </div>
+
         {/* Developer Debug Panel */}
         {showDebug && result.debugInfo && (
           <div className="p-4 bg-slate-900 text-slate-200 font-mono text-xs border-b border-slate-800 space-y-2 animate-fade-in">
@@ -156,58 +206,62 @@ export function AnswerCard({ result, onSelectEntity }: AnswerCardProps) {
         )}
 
         {/* Main Natural Language Answer (Formatted Typography) */}
-        <div className="p-6 md:p-8 space-y-6">
-          <FormattedAnswerView content={result.answer} />
+        {(activeTab === 'all' || activeTab === 'answer') && (
+          <div className="p-6 md:p-8 space-y-6">
+            <FormattedAnswerView content={result.answer} />
 
-          {/* KEY TAKEAWAYS */}
-          {result.keyTakeaways && result.keyTakeaways.length > 0 && (
-            <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-100 space-y-2">
-              <span className="text-xs font-bold font-mono uppercase tracking-wider text-brand-900 block flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-600" />
-                <span>Key Takeaways</span>
-              </span>
-              <ul className="space-y-1.5 text-xs text-slate-700 pl-1">
-                {result.keyTakeaways.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-brand-600 font-bold">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* RELATED KNOWLEDGE (CONNECTED ENTITIES) */}
-          {result.relatedEntities && result.relatedEntities.length > 0 && (
-            <div className="pt-2 border-t border-slate-100 space-y-2.5">
-              <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-400 block">
-                RELATED KNOWLEDGE ({result.relatedEntities.length} Entities)
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                {result.relatedEntities.map((entity) => (
-                  <button
-                    key={entity.id}
-                    onClick={() => onSelectEntity && onSelectEntity(entity)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer shadow-2xs ${getEntityBadgeStyle(entity.type)}`}
-                  >
-                    <span className="font-bold">{entity.name}</span>
-                    <span className="text-[10px] opacity-75 font-mono uppercase">({entity.type})</span>
-                  </button>
-                ))}
+            {/* KEY TAKEAWAYS */}
+            {result.keyTakeaways && result.keyTakeaways.length > 0 && (
+              <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-100 space-y-2">
+                <span className="text-xs font-bold font-mono uppercase tracking-wider text-brand-900 block flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-brand-600" />
+                  <span>Key Takeaways</span>
+                </span>
+                <ul className="space-y-1.5 text-xs text-slate-700 pl-1">
+                  {result.keyTakeaways.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-brand-600 font-bold">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+
+            {/* RELATED KNOWLEDGE (CONNECTED ENTITIES) */}
+            {result.relatedEntities && result.relatedEntities.length > 0 && (
+              <div className="pt-2 border-t border-slate-100 space-y-2.5">
+                <span className="text-xs font-bold font-mono uppercase tracking-wider text-slate-400 block">
+                  RELATED KNOWLEDGE ({result.relatedEntities.length} Entities)
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {result.relatedEntities.map((entity) => (
+                    <button
+                      key={entity.id}
+                      onClick={() => onSelectEntity && onSelectEntity(entity)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer shadow-2xs ${getEntityBadgeStyle(entity.type)}`}
+                    >
+                      <span className="font-bold">{entity.name}</span>
+                      <span className="text-[10px] opacity-75 font-mono uppercase">({entity.type})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 2. RELATIONSHIP GRAPH */}
-      <RelationshipGraphView 
-        nodes={result.graphNodes} 
-        edges={result.graphEdges} 
-      />
+      {(activeTab === 'all' || activeTab === 'graph') && (
+        <RelationshipGraphView 
+          nodes={result.graphNodes} 
+          edges={result.graphEdges} 
+        />
+      )}
 
       {/* 3. GROUNDED EVIDENCE & GITHUB SOURCES */}
-      {result.evidence && result.evidence.length > 0 && (
+      {(activeTab === 'all' || activeTab === 'evidence') && result.evidence && result.evidence.length > 0 && (
         <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider font-mono flex items-center gap-2">

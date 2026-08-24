@@ -5,6 +5,7 @@ interface SearchSectionProps {
   onSearch: (query: string) => void;
   isLoading: boolean;
   isRepoAnalyzed?: boolean;
+  repoName?: string;
 }
 
 export const K8S_EXAMPLE_QUESTIONS = [
@@ -19,7 +20,7 @@ export const K8S_EXAMPLE_QUESTIONS = [
   "What technologies or dependencies does this repository use?"
 ];
 
-export function SearchSection({ onSearch, isLoading, isRepoAnalyzed = true }: SearchSectionProps) {
+export function SearchSection({ onSearch, isLoading, isRepoAnalyzed = true, repoName }: SearchSectionProps) {
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [voiceBannerMessage, setVoiceBannerMessage] = useState<string | null>(null);
@@ -27,8 +28,31 @@ export function SearchSection({ onSearch, isLoading, isRepoAnalyzed = true }: Se
   const recognitionRef = useRef<any>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const displayRepo = repoName || 'Kubernetes';
+  const shortRepo = displayRepo.split('/')[1] || displayRepo;
+
+  const exampleQuestions = repoName && !repoName.toLowerCase().includes('kubernetes') ? [
+    "Explain the README of this repository",
+    `What does ${shortRepo} do?`,
+    `What are the main components of ${shortRepo}?`,
+    `What are the main directories in the ${shortRepo} codebase?`,
+    `Who are the top contributors to ${shortRepo}?`,
+    `What pull requests were recently merged in ${shortRepo}?`,
+    `What issues are open in ${shortRepo}?`,
+    `What technologies or dependencies does ${shortRepo} use?`,
+    `What license does ${shortRepo} use?`
+  ] : K8S_EXAMPLE_QUESTIONS;
+
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key === 'k')) && document.activeElement !== inputRef.current) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
+      window.removeEventListener('keydown', handleKeyDown);
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -206,9 +230,15 @@ export function SearchSection({ onSearch, isLoading, isRepoAnalyzed = true }: Se
               setQuery(e.target.value);
               if (errorMessage) setErrorMessage(null);
             }}
-            placeholder="Ask anything about Kubernetes code, README, components, PRs, or architecture..."
+            placeholder={`Ask anything about ${displayRepo} code, README, components, PRs, or architecture...`}
             className="w-full bg-transparent text-slate-900 placeholder:text-slate-400 outline-hidden font-medium text-sm sm:text-base md:text-lg"
           />
+
+          {!query && (
+            <kbd className="hidden md:inline-flex items-center gap-0.5 px-2 py-1 text-[10px] font-mono font-semibold text-slate-400 bg-slate-100 border border-slate-200 rounded-lg mr-2 shrink-0 select-none">
+              <span>Ctrl</span><span>K</span>
+            </kbd>
+          )}
 
           {query && (
             <button
@@ -261,7 +291,7 @@ export function SearchSection({ onSearch, isLoading, isRepoAnalyzed = true }: Se
           Try asking an engineering question:
         </span>
         <div className="flex flex-wrap items-center gap-2">
-          {K8S_EXAMPLE_QUESTIONS.map((q, idx) => (
+          {exampleQuestions.map((q, idx) => (
             <button
               key={idx}
               onClick={() => handleExampleClick(q)}

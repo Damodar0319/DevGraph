@@ -302,8 +302,206 @@ function extractEntitiesFromQuery(query: string, kb: KubernetesKnowledgeBase): E
 }
 
 // ============================================================================
-// 3. MULTI-STAGE RETRIEVAL & ANSWER GENERATION
-// ============================================================================
+function answerGenericRepoQuestion(
+  query: string,
+  kb: KubernetesKnowledgeBase,
+  intent: QueryIntent
+): QueryResult {
+  const repoName = kb.metadata.name;
+  const fullName = kb.metadata.fullName;
+  const repoUrl = kb.metadata.url;
+  const defaultBranch = kb.metadata.defaultBranch || 'main';
+
+  const sourcesSearched: string[] = ['README.md', 'Repository Tree', 'Contributors', 'Pull Requests', 'Issues'];
+  const entitiesDetected: string[] = [`repo-${repoName.replace(/[^a-zA-Z0-9]/g, '-')}`];
+  const traversalPath: string[] = [`User Query → ${intent} → Graph Traversal → Grounded Synthesis`];
+  const topEvidence: Array<{ id: string; title: string; score: number; type: string }> = [
+    { id: 'README.md', title: `${fullName} README`, score: 0.98, type: 'doc' }
+  ];
+
+  let answer = '';
+  let keyTakeaways: string[] = [];
+  let reasoning: string[] = [];
+  const evidence: EvidenceItem[] = [
+    {
+      id: 'ev-readme',
+      type: 'doc',
+      title: 'README.md',
+      source: `GitHub · ${fullName}`,
+      path: 'README.md',
+      url: `${repoUrl}/blob/${defaultBranch}/README.md`,
+      snippet: kb.readme.slice(0, 450) + '...',
+      relevanceScore: 0.98,
+      relevanceExplanation: `Primary README documentation for ${fullName}`
+    },
+    {
+      id: 'ev-repo-metadata',
+      type: 'doc',
+      title: 'Repository Metadata',
+      source: 'GitHub API',
+      url: repoUrl,
+      snippet: `Repository: ${fullName} · Stars: ${kb.metadata.stars.toLocaleString()} · Language: ${kb.metadata.language} · Open Issues: ${kb.metadata.openIssues}`,
+      relevanceScore: 0.92,
+      relevanceExplanation: 'Official GitHub repository statistics.'
+    }
+  ];
+
+  if (intent === 'README_QUERY' || intent === 'GENERAL_REPOSITORY_QUERY') {
+    reasoning = [
+      `Detected intent: \`${intent}\`.`,
+      `Extracted repository overview and top sections from \`README.md\`.`,
+      `Synthesized architectural summary for ${fullName}.`
+    ];
+    answer = `**${fullName}** is an open-source software project hosted on GitHub (${repoUrl}).
+
+### Repository Summary
+* **Primary Language:** ${kb.metadata.language}
+* **Stars:** ${kb.metadata.stars.toLocaleString()} | **Forks:** ${kb.metadata.forks.toLocaleString()} | **Open Issues:** ${kb.metadata.openIssues}
+* **Description:** ${kb.metadata.description}
+
+### Grounded Overview from README
+${kb.readme.slice(0, 600)}...
+
+### Subsystem Topology
+The codebase is organized into key components:
+${kb.components.map(c => `- **[${c.name}](${repoUrl}/tree/${defaultBranch}/${c.path})**: ${c.description}`).join('\n')}`;
+
+    keyTakeaways = [
+      `${fullName} is a ${kb.metadata.language} repository with ${kb.metadata.stars.toLocaleString()} GitHub stars.`,
+      `Description: ${kb.metadata.description}`,
+      `Main directory components include: ${kb.components.map(c => c.path).slice(0, 4).join(', ')}.`,
+      `Maintained by top contributors including ${kb.contributors.map(c => c.login).slice(0, 3).join(', ')}.`
+    ];
+  } else if (intent === 'COMPONENT_QUERY' || intent === 'DIRECTORY_QUERY') {
+    reasoning = [
+      `Detected intent: \`${intent}\`.`,
+      `Traversed component subgraphs for ${fullName}.`,
+      `Mapped directory packages to source implementation files.`
+    ];
+    answer = `The **${fullName}** codebase is structured into the following primary components and directory packages:
+
+${kb.components.map(c => `#### 📦 [${c.name}](${repoUrl}/tree/${defaultBranch}/${c.path})
+* **Path:** \`${c.path}\`
+* **Role:** ${c.role}
+* **Description:** ${c.description}`).join('\n\n')}
+
+### Sample Core Files
+${kb.files.slice(0, 6).map(f => `- **[${f.name}](${f.url})** (\`${f.path}\`): ${f.description}`).join('\n')}`;
+
+    keyTakeaways = [
+      `Repository contains ${kb.components.length} primary subsystem components.`,
+      `Top directory packages: ${kb.components.map(c => c.path).slice(0, 5).join(', ')}.`,
+      `Indexed ${kb.files.length} key source files for evidence citation.`
+    ];
+  } else if (intent === 'CONTRIBUTOR_QUERY') {
+    reasoning = [
+      `Detected intent: \`${intent}\`.`,
+      `Queried maintainer graph and commit attribution index for ${fullName}.`,
+      `Synthesized contributor roles and commit distributions.`
+    ];
+    answer = `The following maintainers and developers are key contributors to **${fullName}**:
+
+${kb.contributors.map(c => `* **[@${c.login}](${c.url})** (${c.name}): ${c.role} — *${c.contributions} indexed contributions*`).join('\n')}
+
+### Recent Commit Attribution
+${kb.commits.slice(0, 5).map(c => `- \`${c.sha}\`: "${c.message}" by **@${c.author}** (${c.date})`).join('\n')}`;
+
+    keyTakeaways = [
+      `Indexed top maintainers and contributors for ${fullName}.`,
+      `Top maintainer: @${kb.contributors[0]?.login || 'maintainer'} (${kb.contributors[0]?.contributions || 0} commits).`,
+      `Recent activity tracked across commits and pull request reviews.`
+    ];
+  } else if (intent === 'PULL_REQUEST_QUERY' || intent === 'ISSUE_QUERY') {
+    reasoning = [
+      `Detected intent: \`${intent}\`.`,
+      `Retrieved pull requests and issue tracking data for ${fullName}.`,
+      `Mapped PR author attribution and file modification paths.`
+    ];
+    answer = `Here are recent pull requests and open issues tracked in **${fullName}**:
+
+### Pull Requests
+${kb.pullRequests.slice(0, 5).map(p => `* **[PR #${p.number}: ${p.title}](${p.url})**
+  - **Author:** @${p.author} | **Status:** ${p.status} | **Date:** ${p.date}`).join('\n\n')}
+
+### Open Issues
+${kb.issues.slice(0, 5).map(i => `* **[Issue #${i.number}: ${i.title}](${i.url})**
+  - **Author:** @${i.author} | **Status:** ${i.status} | **Date:** ${i.date}`).join('\n\n')}`;
+
+    keyTakeaways = [
+      `Tracked ${kb.pullRequests.length} recent pull requests in ${fullName}.`,
+      `Tracked ${kb.issues.length} active issue discussions.`,
+      `All PRs and issues link directly to GitHub for verification.`
+    ];
+  } else {
+    reasoning = [
+      `Detected intent: \`${intent}\`.`,
+      `Retrieved grounded metadata and documents from ${fullName}.`,
+      `Generated source-grounded response.`
+    ];
+    answer = `### Analysis for ${fullName} (\`${intent}\`)
+
+**${fullName}** is built primarily with **${kb.metadata.language}** and is available at [${repoUrl}](${repoUrl}).
+
+#### Key Repository Information:
+* **Description:** ${kb.metadata.description}
+* **Default Branch:** \`${defaultBranch}\`
+* **Dependencies & Stack:** ${kb.dependencies.map(d => d.name).join(', ')}
+
+#### Codebase Structure & Components:
+${kb.components.map(c => `- **[${c.name}](${repoUrl}/tree/${defaultBranch}/${c.path})**: ${c.description}`).join('\n')}
+
+For further details, view the official repository at [${repoUrl}](${repoUrl}).`;
+
+    keyTakeaways = [
+      `Source grounded response for ${fullName}.`,
+      `Primary language: ${kb.metadata.language}.`,
+      `Repository URL: ${repoUrl}`
+    ];
+  }
+
+  const graphNodes: GraphNode[] = [
+    { id: `repo-${repoName}`, label: fullName, type: 'repository' },
+    { id: 'doc-readme', label: 'README.md', type: 'documentation', subtitle: 'Repository Overview' }
+  ];
+
+  const graphEdges: GraphEdge[] = [
+    { id: 'ge-readme', source: 'doc-readme', target: `repo-${repoName}`, label: 'DOCUMENTED_BY' }
+  ];
+
+  kb.components.forEach((c, idx) => {
+    graphNodes.push({ id: c.id, label: c.name, type: 'component', subtitle: c.path });
+    graphEdges.push({ id: `ge-comp-${idx}`, source: `repo-${repoName}`, target: c.id, label: 'CONTAINS' });
+  });
+
+  kb.contributors.slice(0, 3).forEach((c, idx) => {
+    const cId = `contrib-${c.login}`;
+    graphNodes.push({ id: cId, label: `@${c.login}`, type: 'contributor', subtitle: c.role });
+    graphEdges.push({ id: `ge-contrib-${idx}`, source: cId, target: `repo-${repoName}`, label: 'CONTRIBUTED_TO' });
+  });
+
+  return {
+    query,
+    intent,
+    answer,
+    keyTakeaways,
+    reasoning,
+    evidence,
+    relatedEntities: Object.values(kb.entities).slice(0, 6),
+    graphNodes,
+    graphEdges,
+    confidence: 'high',
+    confidenceLabel: 'Source Grounded (GitHub)',
+    debugInfo: {
+      query,
+      detectedIntent: intent,
+      confidenceScore: 0.95,
+      sourcesSearched,
+      topEvidence,
+      entitiesDetected,
+      traversalPath
+    }
+  };
+}
 
 export async function answerEngineeringQuestion(
   query: string, 
@@ -311,6 +509,11 @@ export async function answerEngineeringQuestion(
 ): Promise<QueryResult> {
   const readyKb = initializeKnowledgeGraph(kb);
   const intent = detectQueryIntent(query);
+
+  if (readyKb.metadata.name.toLowerCase() !== 'kubernetes') {
+    return answerGenericRepoQuestion(query, readyKb, intent);
+  }
+
   const { component, contributor } = extractEntitiesFromQuery(query, readyKb);
 
   const sourcesSearched: string[] = [];

@@ -80,8 +80,8 @@ export function App() {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-base text-slate-900 tracking-tight">DEVGRAPH</span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-brand-50 text-brand-700 border border-brand-200/80">
-                Kubernetes Knowledge Engine
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-brand-50 text-brand-700 border border-brand-200/80 truncate max-w-[200px]">
+                {knowledgeBase.metadata.fullName} Engine
               </span>
             </div>
           </div>
@@ -89,13 +89,13 @@ export function App() {
 
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
           <a
-            href="https://github.com/kubernetes/kubernetes"
+            href={knowledgeBase.metadata.url}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/60 transition-colors"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-mono">kubernetes/kubernetes</span>
+            <span className="font-mono">{knowledgeBase.metadata.fullName}</span>
             <ExternalLink className="w-3 h-3 text-slate-400" />
           </a>
         </div>
@@ -118,7 +118,7 @@ export function App() {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto font-normal leading-relaxed">
-            Connect public engineering repositories and ask complex questions across code, components, PRs, issues, commits, and contributors.
+            Connect any public engineering repository and ask complex questions across code, components, PRs, issues, commits, and contributors.
           </p>
         </section>
 
@@ -139,6 +139,7 @@ export function App() {
             onSearch={handleSearch}
             isLoading={isLoading || isAnalyzing}
             isRepoAnalyzed={isAnalyzed}
+            repoName={knowledgeBase.metadata.fullName}
           />
         </section>
 
@@ -165,10 +166,10 @@ export function App() {
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Network className="w-5 h-5 text-brand-600" />
-                <span>How DevGraph Understands Kubernetes</span>
+                <span>How DevGraph Understands {knowledgeBase.metadata.fullName}</span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                DevGraph extracts entities from <code className="font-mono text-slate-700">kubernetes/kubernetes</code> and connects them via typed relationship graph edges.
+                DevGraph extracts entities from <code className="font-mono text-slate-700">{knowledgeBase.metadata.fullName}</code> and connects them via typed relationship graph edges.
               </p>
             </div>
 

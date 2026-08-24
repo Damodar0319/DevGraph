@@ -24,10 +24,14 @@ interface RelationshipGraphViewProps {
 
 export function RelationshipGraphView({ nodes, edges, onSelectNode }: RelationshipGraphViewProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
 
   if (!nodes || nodes.length === 0) {
     return null;
   }
+
+  const availableTypes = Array.from(new Set(nodes.map(n => n.type)));
+  const filteredNodes = filterType === 'all' ? nodes : nodes.filter(n => n.type === filterType);
 
   const getNodeColor = (type: EntityType) => {
     switch (type) {
@@ -108,25 +112,47 @@ export function RelationshipGraphView({ nodes, edges, onSelectNode }: Relationsh
   };
 
   return (
-    <div className="bg-slate-900 text-white rounded-2xl p-5 md:p-6 border border-slate-800 shadow-xl space-y-4">
+    <div className="bg-slate-900 text-white rounded-3xl p-5 md:p-6 border border-slate-800 shadow-xl space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-brand-400 animate-pulse"></span>
           <h3 className="text-xs font-bold font-mono tracking-wider uppercase text-slate-300">
             Traversed Knowledge Graph & Relationships ({nodes.length} Nodes · {edges.length} Edges)
           </h3>
         </div>
-        <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
-          Click any entity node to inspect details
-        </span>
+
+        {/* Node Type Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px]">
+          <button
+            type="button"
+            onClick={() => setFilterType('all')}
+            className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+              filterType === 'all' ? 'bg-brand-600 text-white font-bold' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            All ({nodes.length})
+          </button>
+          {availableTypes.map(t => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setFilterType(t)}
+              className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer capitalize ${
+                filterType === t ? 'bg-brand-600 text-white font-bold' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {t} ({nodes.filter(n => n.type === t).length})
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Visual Graph Layout */}
-      <div className="bg-slate-950/80 rounded-xl p-4 md:p-6 border border-slate-800/80 overflow-x-auto">
+      <div className="bg-slate-950/80 rounded-2xl p-4 md:p-6 border border-slate-800/80 overflow-x-auto">
         {/* Node Cards Grid / Flow */}
-        <div className="flex flex-wrap items-center justify-center gap-4 py-2">
-          {nodes.map((node) => {
+        <div className="flex flex-wrap items-center justify-center gap-3 py-2">
+          {filteredNodes.map((node) => {
             const config = getNodeColor(node.type);
             const Icon = config.icon;
             const isSelected = node.id === selectedNodeId;

@@ -121,6 +121,9 @@ class IngestDocumentRequest(BaseModel):
     repo_or_channel: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
+class IngestRepoRequest(BaseModel):
+    repo_url: str
+
 class PipelineStats(BaseModel):
     total_documents: int
     total_nodes: int
@@ -129,3 +132,4 @@ class PipelineStats(BaseModel):
     vector_dimensions: int
     avg_latency_ms: float
     status: str = "operational"
+
