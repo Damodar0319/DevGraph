@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-primary: #3450eb;
+    --brand-dark: #0f172a;
+    --border-subtle: #e2e8f0;
+    --card-bg: #ffffff;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+  
+  .glass-card-dark {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(79, 114, 246, 0.35);
+  }
+  
+  .graph-grid-bg {
+    background-size: 24px 24px;
+    background-image: 
+      radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+  }
+
+  .graph-grid-dark {
+    background-size: 24px 24px;
+    background-image: 
+      radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  }
+}
