@@ -56,7 +56,43 @@ export function App() {
     setIsLoading(true);
     setResult(null);
 
-    // Multi-stage pipeline traversal
+    // 1. Try fetching from live FastAPI backend if available
+    try {
+      const apiBase = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+      const res = await fetch(`${apiBase}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: queryText }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        setResult({
+          query: queryText,
+          intent: 'GENERAL_REPOSITORY_QUERY',
+          answer: data.answer,
+          keyTakeaways: data.reasoning_steps?.map((s: any) => s.detail) || [],
+          reasoning: data.reasoning_steps?.map((s: any) => `${s.title}: ${s.detail}`) || [],
+          evidence: data.evidence || [],
+          relatedEntities: data.highlighted_entities || [],
+          graphNodes: data.subgraph?.nodes || [],
+          graphEdges: data.subgraph?.edges || [],
+          confidence: 'high',
+          confidenceLabel: 'Grounded via FastAPI Backend'
+        });
+        setIsLoading(false);
+        return;
+      }
+    } catch (e) {
+      console.log('FastAPI backend notice (using grounded engine):', e);
+    }
+
+    // 2. Client-side Knowledge Engine fallback
     setTimeout(async () => {
       try {
         const queryResult = await answerEngineeringQuestion(queryText, knowledgeBase);
@@ -66,7 +102,7 @@ export function App() {
       } finally {
         setIsLoading(false);
       }
-    }, 1100);
+    }, 800);
   };
 
   return (
